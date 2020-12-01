@@ -3,7 +3,7 @@ use failure::bail;
 use std::collections::HashSet;
 
 fn main() -> Result<()> {
-    dispatch(&part1, &part2)
+    dispatch(part1, part2)
 }
 
 fn part1(input: &str) -> Result<i32> {

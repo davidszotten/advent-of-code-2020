@@ -68,7 +68,7 @@ fn parse_input() -> Result<Args> {
     Ok(Args { part, source })
 }
 
-type DayFunc<T> = dyn Fn(&str) -> Result<T>;
+type DayFunc<T> = fn(&str) -> Result<T>;
 
 fn run<S, T>(part1: &DayFunc<S>, part2: &DayFunc<T>) -> Result<String>
 where
@@ -86,12 +86,12 @@ where
     }
 }
 
-pub fn dispatch<S, T>(part1: &DayFunc<S>, part2: &DayFunc<T>) -> Result<()>
+pub fn dispatch<S, T>(part1: DayFunc<S>, part2: DayFunc<T>) -> Result<()>
 where
     S: Display,
     T: Display,
 {
-    let result = run(part1, part2)?;
+    let result = run(&part1, &part2)?;
     println!("{}", result);
     Ok(())
 }

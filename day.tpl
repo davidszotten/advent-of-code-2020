@@ -1,7 +1,7 @@
 use aoc2020::{dispatch, Result};
 
 fn main() -> Result<()> {
-    dispatch(&part1, &part2)
+    dispatch(part1, part2)
 }
 
 fn part1(_input: &str) -> Result<i32> {
