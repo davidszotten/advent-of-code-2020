@@ -1,5 +1,5 @@
-use aoc2020::{dispatch, Result};
-use failure::bail;
+use anyhow::{bail, Result};
+use aoc2020::dispatch;
 use std::collections::HashSet;
 
 fn main() -> Result<()> {

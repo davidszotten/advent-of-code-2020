@@ -5,12 +5,12 @@ authors = ["David Szotten <davidszotten@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+anyhow = "*"
 # cached = "*"
 clap = "*"
-failure = "*"
 # itertools = "*"
 lazy_static = "*"
 # num = "*"
 # permutohedron = "*"
-# regex = "*"
+regex = "*"
 # md-5 = "*"

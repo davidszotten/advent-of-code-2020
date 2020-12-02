@@ -1,11 +1,8 @@
+use anyhow::{bail, Result};
 use clap::{App, Arg};
-use failure::{bail, Error};
 use std::fmt::Display;
 use std::fs::File;
 use std::io::{self, Read};
-use std::result;
-
-pub type Result<T> = result::Result<T, Error>;
 
 enum Part {
     Part1,
