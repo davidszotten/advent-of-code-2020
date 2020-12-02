@@ -90,6 +90,7 @@ fn part2(input: &str) -> Result<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fmt::Debug;
 
     const INPUT: &str = "1-3 a: abcde
 1-3 b: cdefg
@@ -115,9 +116,14 @@ mod tests {
         Ok(())
     }
 
+    fn assert_err_with_msg<T: Debug>(result: Result<T>, msg: &str) {
+        assert!(dbg!(format!("{:?}", result)).contains(msg));
+    }
+
     #[test]
     fn test_part2_too_short() -> Result<()> {
-        assert!(part2("1-9 b: cdefg").is_err());
+        assert_err_with_msg(part2("qqq"), "regex mismatch");
+        assert_err_with_msg(part2("1-9 b: cdefg"), "too short for second char");
         Ok(())
     }
 }
