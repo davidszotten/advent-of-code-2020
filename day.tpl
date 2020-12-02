@@ -1,4 +1,5 @@
-use aoc2020::{dispatch, Result};
+use anyhow::Result;
+use aoc2020::dispatch;
 
 fn main() -> Result<()> {
     dispatch(part1, part2)
