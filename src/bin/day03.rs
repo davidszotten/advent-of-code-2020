@@ -41,7 +41,11 @@ impl Map {
 
     fn get_at(&self, pos: Coor) -> Option<Tile> {
         let row = self.tiles.get(pos.y as usize)?;
-        Some(*row.get(pos.x as usize % row.len()).expect("Rows wrap"))
+        if row.len() == 0 {
+            None
+        } else {
+            Some(row[pos.x as usize % row.len()])
+        }
     }
 
     fn traverse(&self, step: Coor) -> usize {
