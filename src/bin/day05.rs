@@ -73,4 +73,14 @@ FFFBBBFRRR"
         );
         Ok(())
     }
+
+    #[test]
+    fn test_part2() -> Result<()> {
+        let n4 = "FFFFFFFRLL";
+        let n6 = "FFFFFFFRRL";
+        assert_eq!(calculate(n4)?, 4);
+        assert_eq!(calculate(n6)?, 6);
+        assert_eq!(part2(&format!("{}\n{}", n6, n4))?, 5);
+        Ok(())
+    }
 }
