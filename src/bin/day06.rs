@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use aoc2020::dispatch;
 use reduce::Reduce;
 use std::collections::HashSet;
@@ -7,30 +7,30 @@ fn main() -> Result<()> {
     dispatch(part1, part2)
 }
 
-fn part1(input: &str) -> Result<usize> {
-    Ok(input
-        .split("\n\n")
-        .map(|group| {
-            group
-                .chars()
-                .filter(|c| c.is_alphabetic())
-                .collect::<HashSet<_>>()
-        })
-        .map(|s| s.len())
-        .sum())
-}
+type Answers = HashSet<char>;
 
-fn part2(input: &str) -> Result<usize> {
+fn collate(input: &str, set_fn: &dyn Fn(&Answers, &Answers) -> Answers) -> Result<usize> {
     Ok(input
         .split("\n\n")
         .map(|group| {
             group
                 .split("\n")
                 .map(|p| p.chars().collect::<HashSet<_>>())
-                .reduce(|a, b| a.intersection(&b).cloned().collect())
+                .reduce(|a, b| set_fn(&a, &b))
         })
-        .map(|s| s.expect("empty group").len())
+        .collect::<Option<Vec<_>>>()
+        .ok_or(anyhow!("empty group"))?
+        .iter()
+        .map(|s| s.len())
         .sum())
+}
+
+fn part1(input: &str) -> Result<usize> {
+    collate(input, &|a, b| a | b)
+}
+
+fn part2(input: &str) -> Result<usize> {
+    collate(input, &|a, b| a & b)
 }
 
 #[cfg(test)]
