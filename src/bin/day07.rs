@@ -86,13 +86,12 @@ fn part1(input: &str) -> Result<usize> {
     let mut seen = HashSet::new();
     queue.push_back("shiny gold".into());
     while let Some(bag) = queue.pop_front() {
-        if seen.contains(&bag) {
-            continue;
-        }
         seen.insert(bag);
         if let Some(containers) = index.get(&bag) {
             for container in containers {
-                queue.push_back(container);
+                if !seen.contains(container) {
+                    queue.push_back(container);
+                }
             }
         }
     }
