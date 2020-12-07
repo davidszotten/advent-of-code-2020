@@ -34,15 +34,11 @@ fn parse_line(input: &str) -> Result<Rule> {
         .name("container")
         .ok_or(anyhow!("container not matched"))?
         .as_str();
-    Ok(if let Some(_) = line_caps.name("no") {
-        Rule {
-            container,
-            contains: HashMap::new(),
-        }
+    let contains = if let Some(_) = line_caps.name("no") {
+        HashMap::new()
     } else if let Some(contains_line) = line_caps.name("contains") {
-        let contains_line = contains_line.as_str();
         let mut contains = HashMap::new();
-        for cap in CONTAINS_RE.captures_iter(contains_line) {
+        for cap in CONTAINS_RE.captures_iter(contains_line.as_str()) {
             let bag = cap.name("bag").ok_or(anyhow!("no bag matched"))?.as_str();
             let count: usize = cap
                 .name("count")
@@ -51,12 +47,13 @@ fn parse_line(input: &str) -> Result<Rule> {
                 .parse()?;
             contains.insert(bag.into(), count);
         }
-        Rule {
-            container,
-            contains,
-        }
+        contains
     } else {
         bail!("captured neither no-bags nor contents")
+    };
+    Ok(Rule {
+        container,
+        contains,
     })
 }
 
