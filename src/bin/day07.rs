@@ -8,7 +8,7 @@ fn main() -> Result<()> {
     dispatch(part1, part2)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct Rule<'a> {
     container: &'a str,
     contains: HashMap<&'a str, usize>,
@@ -64,10 +64,10 @@ fn parse(input: &str) -> Result<Vec<Rule>> {
     input.split('\n').map(parse_line).collect()
 }
 
-fn index<'a>(contains: &'a [Rule]) -> HashMap<&'a str, Rule<'a>> {
+fn index<'a>(contains: &'a [Rule]) -> HashMap<&'a str, &'a Rule<'a>> {
     let mut index = HashMap::new();
     for rule in contains {
-        index.insert(rule.container, rule.clone());
+        index.insert(rule.container, rule);
     }
     index
 }
@@ -76,10 +76,7 @@ fn inverted_index<'a>(contains: &'a [Rule]) -> HashMap<&'a str, Vec<&'a str>> {
     let mut index = HashMap::new();
     for rule in contains {
         for &bag in rule.contains.keys() {
-            index
-                .entry(bag)
-                .or_insert(vec![])
-                .push(rule.container.clone());
+            index.entry(bag).or_insert(vec![]).push(rule.container);
         }
     }
     index
@@ -98,7 +95,7 @@ fn part1(input: &str) -> Result<usize> {
         seen.insert(bag);
         if let Some(containers) = index.get(&bag) {
             for container in containers {
-                queue.push_back(container.clone());
+                queue.push_back(container);
             }
         }
     }
