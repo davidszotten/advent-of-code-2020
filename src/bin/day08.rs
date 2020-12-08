@@ -43,7 +43,7 @@ enum RunResult {
     Terminates(i64),
 }
 
-fn run(program: Program) -> Result<RunResult> {
+fn run(program: &Program) -> Result<RunResult> {
     let mut pc: i64 = 0;
     let mut acc = 0;
     let mut seen = HashSet::new();
@@ -70,26 +70,29 @@ fn run(program: Program) -> Result<RunResult> {
 
 fn part1(input: &str) -> Result<i64> {
     let program = parse(input)?;
-    if let RunResult::Loops(acc) = run(program)? {
+    if let RunResult::Loops(acc) = run(&program)? {
         Ok(acc)
     } else {
         bail!("Unexpectedly terminates")
     }
 }
 
+fn swap(instruction: &Instruction) -> Instruction {
+    match instruction {
+        Instruction::Nop(n) => Instruction::Jmp(*n),
+        Instruction::Jmp(n) => Instruction::Nop(*n),
+        Instruction::Acc(n) => Instruction::Acc(*n),
+    }
+}
+
 fn part2(input: &str) -> Result<i64> {
-    let program = parse(input)?;
-    for (index, instruction) in program.iter().enumerate() {
-        let replacement = match instruction {
-            Instruction::Nop(n) => Instruction::Jmp(*n),
-            Instruction::Jmp(n) => Instruction::Nop(*n),
-            _ => continue,
-        };
-        let mut copy = program.clone();
-        copy[index] = replacement;
-        if let RunResult::Terminates(val) = run(copy)? {
+    let mut program = parse(input)?;
+    for index in 0..program.len() {
+        program[index] = swap(&program[index]);
+        if let RunResult::Terminates(val) = run(&program)? {
             return Ok(val);
         }
+        program[index] = swap(&program[index]);
     }
     bail!("no terminating solution found");
 }
@@ -117,7 +120,7 @@ acc +6";
     #[test]
     fn test_loops() -> Result<()> {
         let program = parse(INPUT)?;
-        assert_eq!(run(program)?, RunResult::Loops(5));
+        assert_eq!(run(&program)?, RunResult::Loops(5));
         Ok(())
     }
 
@@ -134,7 +137,7 @@ acc +1
 nop -4
 acc +6",
         )?;
-        assert_eq!(run(program)?, RunResult::Terminates(8));
+        assert_eq!(run(&program)?, RunResult::Terminates(8));
         Ok(())
     }
 
