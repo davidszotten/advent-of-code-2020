@@ -26,31 +26,50 @@ impl TryFrom<char> for Tile {
     }
 }
 
-struct Map {
-    tiles: Vec<Vec<Tile>>,
-}
-
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum NeighbourType {
     Adjacent,
     LoS,
 }
 
+struct Map {
+    tiles: Vec<Tile>,
+    width: usize,
+}
+
 impl Map {
-    fn new(tiles: Vec<Vec<Tile>>) -> Self {
-        Map { tiles }
+    fn from_str(input: &str) -> Result<Self> {
+        let width = input.find('\n').unwrap_or(input.len());
+        let tiles = input
+            .chars()
+            .filter(|&c| c != '\n')
+            .map(|c| Tile::try_from(c))
+            .collect::<Result<Vec<_>>>()?;
+        Ok(Map { tiles, width })
     }
 
-    fn from_str(input: &str) -> Result<Self> {
-        parse(input).map(|t| Self::new(t))
+    fn height(&self) -> usize {
+        self.tiles.len() / self.width
+    }
+
+    fn idx(&self, coor: &Coor) -> Option<usize> {
+        if coor.y < 0
+            || coor.y >= (self.height() as i64)
+            || coor.x < 0
+            || coor.x >= (self.width as i64)
+        {
+            return None;
+        }
+        Some((coor.y as usize) * self.width + (coor.x as usize))
+    }
+
+    fn coor(&self, idx: usize) -> Coor {
+        Coor::new((idx % self.width) as i64, (idx / self.width) as i64)
     }
 
     fn get(&self, coor: &Coor) -> Option<Tile> {
-        if coor.y < 0 || coor.x < 0 {
-            return None;
-        }
-        let row = self.tiles.get(coor.y as usize)?;
-        row.get(coor.x as usize).map(|&t| t)
+        let idx = self.idx(coor)?;
+        self.tiles.get(idx).map(|&t| t)
     }
 
     fn occupied_neighbours(&self, coor: &Coor, nt: NeighbourType) -> usize {
@@ -87,33 +106,23 @@ impl Map {
         .sum()
     }
 
-    fn next_tiles(&self, nt: NeighbourType, min_neighbours: usize) -> Option<Vec<Vec<Tile>>> {
+    fn next_tiles(&self, nt: NeighbourType, min_neighbours: usize) -> Option<Vec<Tile>> {
         let mut changed = false;
         let tiles = self
             .tiles
             .iter()
             .enumerate()
-            .map(|(y, row)| {
-                row.iter()
-                    .enumerate()
-                    .map(|(x, tile)| {
-                        (
-                            tile,
-                            self.occupied_neighbours(&Coor::new(x as i64, y as i64), nt),
-                        )
-                    })
-                    .map(|(&tile, n)| match (tile, n) {
-                        (Tile::Empty, 0) => {
-                            changed = true;
-                            Tile::Occupied
-                        }
-                        (Tile::Occupied, m) if m >= min_neighbours => {
-                            changed = true;
-                            Tile::Empty
-                        }
-                        (tile, _) => tile,
-                    })
-                    .collect::<Vec<_>>()
+            .map(|(idx, tile)| (tile, self.occupied_neighbours(&self.coor(idx), nt)))
+            .map(|(&tile, n)| match (tile, n) {
+                (Tile::Empty, 0) => {
+                    changed = true;
+                    Tile::Occupied
+                }
+                (Tile::Occupied, m) if m >= min_neighbours => {
+                    changed = true;
+                    Tile::Empty
+                }
+                (tile, _) => tile,
             })
             .collect::<Vec<_>>();
 
@@ -128,22 +137,8 @@ impl Map {
         while let Some(tiles) = self.next_tiles(nt, min_neighbours) {
             self.tiles = tiles;
         }
-        self.tiles
-            .iter()
-            .map(|r| r.iter().filter(|&t| *t == Tile::Occupied).count())
-            .sum()
+        self.tiles.iter().filter(|&t| *t == Tile::Occupied).count()
     }
-}
-
-fn parse(input: &str) -> Result<Vec<Vec<Tile>>> {
-    input
-        .split('\n')
-        .map(|row| {
-            row.chars()
-                .map(|c| Tile::try_from(c))
-                .collect::<Result<Vec<_>>>()
-        })
-        .collect::<Result<Vec<_>>>()
 }
 
 fn part1(input: &str) -> Result<usize> {
@@ -180,6 +175,30 @@ L.LLLLL.LL";
     #[test]
     fn test_part2() -> Result<()> {
         assert_eq!(part2(INPUT)?, 26);
+        Ok(())
+    }
+
+    #[test]
+    fn test_coor() -> Result<()> {
+        let map = Map::from_str(
+            "...
+...",
+        )?;
+        for idx in 0..6 {
+            assert_eq!(map.idx(&map.coor(idx)), Some(idx));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_lookup() -> Result<()> {
+        let map = Map::from_str(
+            ".L.
+...",
+        )?;
+        assert_eq!(map.get(&Coor::new(1, 0)), Some(Tile::Empty));
+        assert_eq!(map.get(&Coor::new(3, 0)), None);
+        assert_eq!(map.get(&Coor::new(0, 4)), None);
         Ok(())
     }
 }
