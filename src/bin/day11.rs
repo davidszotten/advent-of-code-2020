@@ -30,6 +30,12 @@ struct Map {
     tiles: Vec<Vec<Tile>>,
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+enum NeighbourType {
+    Adjacent,
+    LoS,
+}
+
 impl Map {
     fn new(tiles: Vec<Vec<Tile>>) -> Self {
         Map { tiles }
@@ -47,25 +53,7 @@ impl Map {
         row.get(coor.x as usize).map(|&t| t)
     }
 
-    fn occupied_neighbours(&self, coor: &Coor) -> usize {
-        [
-            (-1, -1),
-            (-1, 0),
-            (-1, 1),
-            (0, -1),
-            (0, 1),
-            (1, -1),
-            (1, 0),
-            (1, 1),
-        ]
-        .iter()
-        .map(|&(dx, dy)| Coor::new(dx, dy) + *coor)
-        .filter_map(|c| self.get(&c))
-        .filter(|&t| t == Tile::Occupied)
-        .count()
-    }
-
-    fn occupied_los_neighbours(&self, coor: &Coor) -> usize {
+    fn occupied_neighbours(&self, coor: &Coor, nt: NeighbourType) -> usize {
         let mut seen = 0;
         let directions = [
             (-1, -1),
@@ -87,13 +75,16 @@ impl Map {
                     seen += 1;
                     break;
                 }
-                pos += direction;
+                match nt {
+                    NeighbourType::Adjacent => break,
+                    NeighbourType::LoS => pos += direction,
+                }
             }
         }
         seen
     }
 
-    fn next_tiles(&self) -> (bool, Vec<Vec<Tile>>) {
+    fn next_tiles(&self, nt: NeighbourType, min_neighbours: usize) -> (bool, Vec<Vec<Tile>>) {
         let mut changed = false;
         let tiles = self
             .tiles
@@ -105,7 +96,7 @@ impl Map {
                     .map(|(x, tile)| {
                         (
                             tile,
-                            self.occupied_neighbours(&Coor::new(x as i64, y as i64)),
+                            self.occupied_neighbours(&Coor::new(x as i64, y as i64), nt),
                         )
                     })
                     .map(|(&tile, n)| match (tile, n) {
@@ -113,7 +104,7 @@ impl Map {
                             changed = true;
                             Tile::Occupied
                         }
-                        (Tile::Occupied, m) if m >= 4 => {
+                        (Tile::Occupied, m) if m >= min_neighbours => {
                             changed = true;
                             Tile::Empty
                         }
@@ -126,56 +117,9 @@ impl Map {
         (changed, tiles)
     }
 
-    fn next_tiles_los(&self) -> (bool, Vec<Vec<Tile>>) {
-        let mut changed = false;
-        let tiles = self
-            .tiles
-            .iter()
-            .enumerate()
-            .map(|(y, row)| {
-                row.iter()
-                    .enumerate()
-                    .map(|(x, tile)| {
-                        (
-                            tile,
-                            self.occupied_los_neighbours(&Coor::new(x as i64, y as i64)),
-                        )
-                    })
-                    .map(|(&tile, n)| match (tile, n) {
-                        (Tile::Empty, 0) => {
-                            changed = true;
-                            Tile::Occupied
-                        }
-                        (Tile::Occupied, m) if m >= 5 => {
-                            changed = true;
-                            Tile::Empty
-                        }
-                        (tile, _) => tile,
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
-
-        (changed, tiles)
-    }
-
-    fn run(&mut self) -> usize {
+    fn run(&mut self, nt: NeighbourType, min_neighbours: usize) -> usize {
         loop {
-            let (changed, tiles) = self.next_tiles();
-            if !changed {
-                break;
-            }
-            self.tiles = tiles;
-        }
-        self.tiles
-            .iter()
-            .map(|r| r.iter().filter(|&t| *t == Tile::Occupied).count())
-            .sum()
-    }
-
-    fn run_los(&mut self) -> usize {
-        loop {
-            let (changed, tiles) = self.next_tiles_los();
+            let (changed, tiles) = self.next_tiles(nt, min_neighbours);
             if !changed {
                 break;
             }
@@ -201,12 +145,12 @@ fn parse(input: &str) -> Result<Vec<Vec<Tile>>> {
 
 fn part1(input: &str) -> Result<usize> {
     let mut map = Map::from_str(input)?;
-    Ok(map.run())
+    Ok(map.run(NeighbourType::Adjacent, 4))
 }
 
 fn part2(input: &str) -> Result<usize> {
     let mut map = Map::from_str(input)?;
-    Ok(map.run_los())
+    Ok(map.run(NeighbourType::LoS, 5))
 }
 
 #[cfg(test)]
