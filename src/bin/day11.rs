@@ -54,8 +54,7 @@ impl Map {
     }
 
     fn occupied_neighbours(&self, coor: &Coor, nt: NeighbourType) -> usize {
-        let mut seen = 0;
-        let directions = [
+        [
             (-1, -1),
             (-1, 0),
             (-1, 1),
@@ -64,15 +63,18 @@ impl Map {
             (1, -1),
             (1, 0),
             (1, 1),
-        ];
-        for direction in directions.iter().map(|&(dx, dy)| Coor::new(dx, dy)) {
+        ]
+        .iter()
+        .map(|&(dx, dy)| Coor::new(dx, dy))
+        .map(|direction| {
+            let mut occupied = 0;
             let mut pos = *coor + direction;
             while let Some(tile) = self.get(&pos) {
                 if tile == Tile::Empty {
                     break;
                 }
                 if tile == Tile::Occupied {
-                    seen += 1;
+                    occupied += 1;
                     break;
                 }
                 match nt {
@@ -80,11 +82,12 @@ impl Map {
                     NeighbourType::LoS => pos += direction,
                 }
             }
-        }
-        seen
+            occupied
+        })
+        .sum()
     }
 
-    fn next_tiles(&self, nt: NeighbourType, min_neighbours: usize) -> (bool, Vec<Vec<Tile>>) {
+    fn next_tiles(&self, nt: NeighbourType, min_neighbours: usize) -> Option<Vec<Vec<Tile>>> {
         let mut changed = false;
         let tiles = self
             .tiles
@@ -114,15 +117,15 @@ impl Map {
             })
             .collect::<Vec<_>>();
 
-        (changed, tiles)
+        if changed {
+            Some(tiles)
+        } else {
+            None
+        }
     }
 
     fn run(&mut self, nt: NeighbourType, min_neighbours: usize) -> usize {
-        loop {
-            let (changed, tiles) = self.next_tiles(nt, min_neighbours);
-            if !changed {
-                break;
-            }
+        while let Some(tiles) = self.next_tiles(nt, min_neighbours) {
             self.tiles = tiles;
         }
         self.tiles
