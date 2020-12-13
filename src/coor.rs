@@ -1,5 +1,5 @@
 use std::fmt;
-use std::ops::{Add, AddAssign};
+use std::ops::{Add, AddAssign, Mul};
 
 #[derive(PartialEq, Eq, Default, Clone, Copy, Hash)]
 pub struct Coor {
@@ -32,5 +32,12 @@ impl AddAssign for Coor {
     fn add_assign(&mut self, other: Self) {
         // Coor::new(self.x + other.x, self.y + other.y)
         *self = *self + other;
+    }
+}
+
+impl Mul<i64> for Coor {
+    type Output = Self;
+    fn mul(self, rhs: i64) -> Self::Output {
+        Coor::new(self.x * rhs, self.y * rhs)
     }
 }

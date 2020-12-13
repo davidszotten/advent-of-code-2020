@@ -8,13 +8,75 @@ fn main() -> Result<()> {
 }
 
 #[derive(Debug, PartialEq)]
+enum Direction {
+    North,
+    South,
+    East,
+    West,
+}
+
+impl Direction {
+    fn as_coor(&self) -> Coor {
+        use Direction::*;
+
+        match self {
+            North => Coor::new(0, 1),
+            South => Coor::new(0, -1),
+            East => Coor::new(1, 0),
+            West => Coor::new(-1, 0),
+        }
+    }
+}
+
+impl TryFrom<char> for Direction {
+    type Error = Error;
+
+    fn try_from(c: char) -> Result<Self> {
+        use Direction::*;
+
+        Ok(match c {
+            'N' => North,
+            'S' => South,
+            'E' => East,
+            'W' => West,
+            _ => bail!("invalid direction `{}`", c),
+        })
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum Turn {
+    Left,
+    Right,
+}
+
+impl Turn {
+    fn apply(&self, coor: Coor) -> Coor {
+        match self {
+            Turn::Right => Coor::new(coor.y, -coor.x),
+            Turn::Left => Coor::new(-coor.y, coor.x),
+        }
+    }
+}
+
+impl TryFrom<char> for Turn {
+    type Error = Error;
+
+    fn try_from(c: char) -> Result<Self> {
+        use Turn::*;
+
+        Ok(match c {
+            'R' => Right,
+            'L' => Left,
+            _ => bail!("invalid turn `{}`", c),
+        })
+    }
+}
+
+#[derive(Debug, PartialEq)]
 enum Instruction {
-    North(i64),
-    South(i64),
-    East(i64),
-    West(i64),
-    Left(i64),
-    Right(i64),
+    Direction(Direction, i64),
+    Turn(Turn, i64),
     Forward(i64),
 }
 
@@ -22,19 +84,18 @@ impl TryFrom<&str> for Instruction {
     type Error = Error;
 
     fn try_from(s: &str) -> Result<Self> {
-        use Instruction::*;
-
         let val: i64 = s[1..].parse()?;
-        Ok(match s.chars().next().ok_or(anyhow!("empty string"))? {
-            'N' => North(val),
-            'S' => South(val),
-            'E' => East(val),
-            'W' => West(val),
-            'L' => Left(val),
-            'R' => Right(val),
-            'F' => Forward(val),
-            _ => bail!("invalid direction `{}`", s),
-        })
+        let c = s.chars().next().ok_or(anyhow!("empty string"))?;
+        if let Ok(direction) = Direction::try_from(c) {
+            return Ok(Instruction::Direction(direction, val));
+        }
+        if let Ok(turn) = Turn::try_from(c) {
+            return Ok(Instruction::Turn(turn, val));
+        }
+        if c == 'F' {
+            return Ok(Instruction::Forward(val));
+        }
+        bail!("invalid direction `{}`", s);
     }
 }
 
@@ -45,15 +106,13 @@ fn parse(input: &str) -> Result<Vec<Instruction>> {
         .collect()
 }
 
-fn turn(direction: Coor, amount: i64) -> Coor {
+fn turn(coor: Coor, direction: Turn, amount: i64) -> Coor {
     // (0 -1)  (x)  =  (-y)
     // (1  0)  (y)  =  ( x)
     if amount == 0 {
-        direction
-    } else if amount < 0 {
-        turn(Coor::new(direction.y, -direction.x), amount + 90)
+        coor
     } else {
-        turn(Coor::new(-direction.y, direction.x), amount - 90)
+        turn(direction.apply(coor), direction, amount - 90)
     }
 }
 
@@ -65,17 +124,9 @@ fn part1(input: &str) -> Result<i64> {
     let mut position = Coor::new(0, 0);
     for instruction in instructions {
         match instruction {
-            North(v) => position += Coor::new(0, v),
-            South(v) => position += Coor::new(0, -v),
-            East(v) => position += Coor::new(v, 0),
-            West(v) => position += Coor::new(-v, 0),
-            Left(v) => direction = turn(direction, v),
-            Right(v) => direction = turn(direction, -v),
-            Forward(v) => {
-                for _ in 0..v {
-                    position += direction
-                }
-            }
+            Direction(to, v) => position += to.as_coor() * v,
+            Turn(to, v) => direction = turn(direction, to, v),
+            Forward(v) => position += direction * v,
         }
     }
     Ok(position.x.abs() + position.y.abs())
@@ -89,17 +140,9 @@ fn part2(input: &str) -> Result<i64> {
     let mut position = Coor::new(0, 0);
     for instruction in instructions {
         match instruction {
-            North(v) => waypoint += Coor::new(0, v),
-            South(v) => waypoint += Coor::new(0, -v),
-            East(v) => waypoint += Coor::new(v, 0),
-            West(v) => waypoint += Coor::new(-v, 0),
-            Left(v) => waypoint = turn(waypoint, v),
-            Right(v) => waypoint = turn(waypoint, -v),
-            Forward(v) => {
-                for _ in 0..v {
-                    position += waypoint
-                }
-            }
+            Direction(to, v) => waypoint += to.as_coor() * v,
+            Turn(to, v) => waypoint = turn(waypoint, to, v),
+            Forward(v) => position += waypoint * v,
         }
     }
     Ok(position.x.abs() + position.y.abs())
