@@ -1,9 +1,9 @@
-use anyhow::{anyhow, Error, Result};
+use anyhow::{anyhow, bail, Error, Result};
 use aoc2020::dispatch;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap;
-use std::convert::{From, TryFrom};
+use std::convert::TryFrom;
 
 #[derive(Debug, PartialEq, Default)]
 struct Mask {
@@ -36,19 +36,20 @@ impl Mask {
     }
 }
 
-impl From<&str> for Mask {
-    fn from(s: &str) -> Self {
-        let filter_mask = |chr| {
-            s.chars()
-                .map(|c| (c == chr) as usize)
-                .fold(0, |acc, el| (acc << 1) + el)
-        };
+impl TryFrom<&str> for Mask {
+    type Error = Error;
 
-        Mask {
-            zeros: filter_mask('0'),
-            ones: filter_mask('1'),
-            floating: filter_mask('X'),
+    fn try_from(s: &str) -> Result<Self> {
+        let mut mask = Mask::default();
+        for (idx, c) in s.chars().rev().enumerate() {
+            *match c {
+                '0' => &mut mask.zeros,
+                '1' => &mut mask.ones,
+                'X' => &mut mask.floating,
+                _ => bail!("invalid char `{}`", c),
+            } += 1 << idx;
         }
+        Ok(mask)
     }
 }
 
@@ -73,7 +74,7 @@ impl TryFrom<&str> for Instruction {
             .ok_or(anyhow!("regex mismatch for `{}`", s))?;
 
         Ok(if let Some(raw_mask) = caps.name("mask") {
-            let mask = Mask::from(raw_mask.as_str());
+            let mask = Mask::try_from(raw_mask.as_str())?;
             Instruction::Mask(mask)
         } else {
             let raw_mem = caps.name("mem").ok_or(anyhow!("mem not found"))?;
@@ -122,27 +123,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_mask_parse() {
+    fn test_mask_parse() -> Result<()> {
         assert_eq!(
-            Mask::from("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX1XXXX0X"),
+            Mask::try_from("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX1XXXX0X")?,
             Mask {
                 zeros: 2,
                 ones: 64,
                 floating: 68719476669
             }
         );
+        Ok(())
     }
 
     #[test]
-    fn test_mask_parse2() {
+    fn test_mask_parse2() -> Result<()> {
         assert_eq!(
-            Mask::from("000000000000000000000000000000X1001X"),
+            Mask::try_from("000000000000000000000000000000X1001X")?,
             Mask {
                 zeros: 68719476684,
                 ones: 18,
                 floating: 33
             }
         );
+        Ok(())
     }
 
     const INPUT: &str = "mask = XXXXXXXXXXXXXXXXXXXXXXXXXXXXX1XXXX0X
@@ -171,7 +174,7 @@ mem[8] = 0";
 
     #[test]
     fn test_mask_apply_float() -> Result<()> {
-        let mut addresses = Mask::from("000000000000000000000000000000X1001X").apply_float(42);
+        let mut addresses = Mask::try_from("000000000000000000000000000000X1001X")?.apply_float(42);
         addresses.sort();
         assert_eq!(addresses, vec![26, 27, 58, 59]);
         Ok(())
