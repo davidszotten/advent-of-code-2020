@@ -15,28 +15,26 @@ fn parse(input: &str) -> Result<Vec<usize>> {
         .collect::<Result<Vec<_>>>()
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 struct History {
-    first: Option<usize>,
-    second: Option<usize>,
+    first: usize,
+    second: usize,
 }
 
 impl History {
     fn new() -> Self {
-        History {
-            first: None,
-            second: None,
-        }
+        Self::default()
     }
     fn add(&mut self, entry: usize) {
         self.second = self.first;
-        self.first = Some(entry);
+        self.first = entry;
     }
 
     fn diff(&self) -> usize {
-        match (self.first, self.second) {
-            (Some(first), Some(second)) => first - second,
-            _ => 0,
+        if self.second == 0 {
+            0
+        } else {
+            self.first - self.second
         }
     }
 }
