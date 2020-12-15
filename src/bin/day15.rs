@@ -17,30 +17,26 @@ fn parse(input: &str) -> Result<Vec<usize>> {
 
 #[derive(Debug, Clone, Copy)]
 struct History {
-    history: [usize; 2],
-    len: usize,
+    first: Option<usize>,
+    second: Option<usize>,
 }
 
 impl History {
     fn new() -> Self {
         History {
-            history: [0, 0],
-            len: 0,
+            first: None,
+            second: None,
         }
     }
     fn add(&mut self, entry: usize) {
-        self.history[1] = self.history[0];
-        self.history[0] = entry;
-        if self.len < 2 {
-            self.len += 1;
-        }
+        self.second = self.first;
+        self.first = Some(entry);
     }
 
     fn diff(&self) -> usize {
-        if self.len < 2 {
-            0
-        } else {
-            self.history[0] - self.history[1]
+        match (self.first, self.second) {
+            (Some(first), Some(second)) => first - second,
+            _ => 0,
         }
     }
 }
