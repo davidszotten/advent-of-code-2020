@@ -31,6 +31,15 @@ impl History {
     fn add(&mut self, entry: usize) {
         self.history[1] = self.history[0];
         self.history[0] = entry;
+        self.len += 1;
+    }
+
+    fn diff(&self) -> usize {
+        if self.len < 2 {
+            0
+        } else {
+            self.history[0] - self.history[1]
+        }
     }
 }
 
@@ -40,26 +49,20 @@ fn run(initial: &[usize], turns: usize) -> usize {
     let mut next_number = 0;
     let mut last_seen = HashMap::new();
     for &n in initial {
-        last_seen.entry(n).or_insert(vec![]).push(turn);
+        last_seen.entry(n).or_insert(History::new()).add(turn);
         let history = last_seen.get(&n).expect("just inserted");
-        next_number = if history.len() > 1 {
-            history[0] - history[1]
-        } else {
-            0
-        };
+        next_number = history.diff();
         last_number = n;
         turn += 1;
     }
     while turn <= turns {
         // dbg!(turn, last_number);
         let history = last_seen.get(&last_number).expect("just inserted");
-        next_number = if history.len() > 1 {
-            // dbg!(&history);
-            history[history.len() - 1] - history[history.len() - 2]
-        } else {
-            0
-        };
-        last_seen.entry(next_number).or_insert(vec![]).push(turn);
+        next_number = history.diff();
+        last_seen
+            .entry(next_number)
+            .or_insert(History::new())
+            .add(turn);
         last_number = next_number;
         // println!("say at {}: {}", turn, next_number);
         turn += 1;
