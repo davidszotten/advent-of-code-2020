@@ -44,21 +44,18 @@ impl History {
 fn run(initial: &[usize], turns: usize) -> usize {
     let mut turn = 1;
     let mut last_number = 0;
-    let mut next_number = 0;
     let mut last_seen: Vec<History> = vec![History::new(); turns];
     for &n in initial {
-        last_seen[n].add(turn);
-        next_number = last_seen[n].diff();
         last_number = n;
+        last_seen[last_number].add(turn);
         turn += 1;
     }
     while turn <= turns {
-        next_number = last_seen[last_number].diff();
-        last_seen[next_number].add(turn);
-        last_number = next_number;
+        last_number = last_seen[last_number].diff();
+        last_seen[last_number].add(turn);
         turn += 1;
     }
-    next_number
+    last_number
 }
 
 fn part1(input: &str) -> Result<usize> {
@@ -78,6 +75,12 @@ mod tests {
     #[test]
     fn test_part1() -> Result<()> {
         assert_eq!(part1("0,3,6")?, 436);
+        assert_eq!(part1("1,3,2")?, 1);
+        assert_eq!(part1("2,1,3")?, 10);
+        assert_eq!(part1("1,2,3")?, 27);
+        assert_eq!(part1("2,3,1")?, 78);
+        assert_eq!(part1("3,2,1")?, 438);
+        assert_eq!(part1("3,1,2")?, 1836);
         Ok(())
     }
 
