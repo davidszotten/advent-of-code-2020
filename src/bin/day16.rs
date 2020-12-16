@@ -7,25 +7,25 @@ fn main() -> Result<()> {
     dispatch(part1, part2)
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
-struct Field {
-    name: String,
+#[derive(Debug, PartialEq, Eq, Clone, Hash, Copy)]
+struct Field<'a> {
+    name: &'a str,
     r1_low: usize,
     r1_high: usize,
     r2_low: usize,
     r2_high: usize,
 }
 
-impl Field {
+impl<'a> Field<'a> {
     fn valid(&self, value: usize) -> bool {
         (value >= self.r1_low && value <= self.r1_high)
             || (value >= self.r2_low && value <= self.r2_high)
     }
 }
 
-impl TryFrom<&str> for Field {
+impl<'a> TryFrom<&'a str> for Field<'a> {
     type Error = Error;
-    fn try_from(s: &str) -> Result<Self> {
+    fn try_from(s: &'a str) -> Result<Self> {
         let mut it = s.split(": ");
         let name = it.next().ok_or(anyhow!("no field name"))?;
         let ranges = it.next().ok_or(anyhow!("no ranges"))?;
@@ -41,7 +41,7 @@ impl TryFrom<&str> for Field {
         let r2_low = it.next().ok_or(anyhow!("r2_low missing"))?.parse()?;
         let r2_high = it.next().ok_or(anyhow!("r2_high missing"))?.parse()?;
         Ok(Field {
-            name: name.into(),
+            name,
             r1_low,
             r1_high,
             r2_low,
@@ -90,8 +90,12 @@ fn parse(input: &str) -> Result<(Vec<Field>, Ticket, Vec<Ticket>)> {
     Ok((fields, my_ticket, nearby_tickets))
 }
 
-fn field_map(fields: &[Field], ticket: Ticket, valid_tickets: &[Ticket]) -> HashMap<String, usize> {
-    let mut field_pos = HashMap::new();
+fn field_map<'a>(
+    fields: &'a [Field],
+    ticket: Ticket,
+    valid_tickets: &[Ticket],
+) -> HashMap<&'a str, usize> {
+    let mut field_pos: HashMap<&str, usize> = HashMap::new();
     let mut field_values = vec![vec![]; ticket.len()];
     for ticket in valid_tickets {
         for (index, value) in ticket.iter().enumerate() {
@@ -109,17 +113,14 @@ fn field_map(fields: &[Field], ticket: Ticket, valid_tickets: &[Ticket]) -> Hash
                 .collect();
             if possible_fields.len() == 1 {
                 let field = possible_fields[0].clone();
-                field_pos.insert(field.name.clone(), *position);
+                field_pos.insert(&field.name, *position);
                 remaining_fields.remove(field);
                 remaining_positions.remove(position);
                 break;
             }
         }
     }
-    field_pos
-        .iter()
-        .map(|(k, v)| (k.clone(), ticket[*v]))
-        .collect()
+    field_pos.iter().map(|(k, v)| (*k, ticket[*v])).collect()
 }
 
 fn part1(input: &str) -> Result<usize> {
