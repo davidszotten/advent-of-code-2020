@@ -56,8 +56,6 @@ impl<'a> TryFrom<&'a str> for RuleValue<'a> {
         if s.starts_with('"') {
             Ok(RuleValue::Literal(&s[1..s.len() - 1]))
         } else {
-            // let mut numbers = s.split(' ').filter_map(|s| s.parse::<usize>().ok());
-            // dbg!(numbers.clone().collect::<Vec<_>>());
             Ok(RuleValue::Combination(
                 s.split(' ')
                     .map(RuleEntry::try_from)
@@ -67,8 +65,7 @@ impl<'a> TryFrom<&'a str> for RuleValue<'a> {
     }
 }
 
-// fn parse<'a>(input: &'a str) -> Result<(Vec<RuleValue<'a>>, Vec<&'a str>)> {
-fn parse<'a>(input: &'a str) -> Result<usize> {
+fn parse<'a>(input: &'a str) -> Result<(HashMap<usize, String>, Vec<&'a str>)> {
     let mut parts = input.split("\n\n");
     let raw_rules = parts.next().unwrap();
     let raw_messages = parts.next().unwrap();
@@ -82,9 +79,8 @@ fn parse<'a>(input: &'a str) -> Result<usize> {
     let mut patterns: HashMap<usize, String> = HashMap::new();
     let mut remaining: HashSet<_> = rules.iter().map(|r| r.number).collect();
     while remaining.len() > 0 {
-        // dbg!(&remaining);
+        let prev = remaining.len();
         for next in remaining.iter() {
-            // dbg!(&next);
             let rule = rule_map.get(&next).expect("all rules are in here");
             match &rule.value {
                 RuleValue::Literal(lit) => {
@@ -93,7 +89,6 @@ fn parse<'a>(input: &'a str) -> Result<usize> {
                     break;
                 }
                 RuleValue::Combination(subindexes) => {
-                    // dbg!(&patterns);
                     if let Ok(subpatterns) = subindexes
                         .iter()
                         .map(|rv| match rv {
@@ -119,38 +114,38 @@ fn parse<'a>(input: &'a str) -> Result<usize> {
                 }
             }
         }
+        if prev == remaining.len() {
+            break;
+        }
     }
 
-    // dbg!(&patterns);
+    Ok((patterns, messages))
+}
+
+fn part1(input: &str) -> Result<usize> {
+    let (patterns, messages) = parse(input)?;
+
     let pattern = patterns.get(&0).expect("have all patterns now");
 
     let re = Regex::new(&format!("^{}$", pattern)).expect("invalid regex");
-    // dbg!(messages
-    // .iter()
-    // .map(|m| (m, re.is_match(m)))
-    // .collect::<Vec<_>>());
     Ok(messages.iter().filter(|m| re.is_match(m)).count())
 }
 
-/*
-// a ((aa|bb)(ab|ba)|(ab|ba)(aa|bb)b
+fn part2(input: &str) -> Result<usize> {
+    let (patterns, messages) = parse(input)?;
+    let p42 = &patterns.get(&42).expect("have 42");
+    let p31 = &patterns.get(&31).expect("have 31");
 
-(a
-    (
-        (aa)|(bb)(ab)|(ba)
-    )|(
-        (ab)|(ba)(aa)|(bb)
-    )
-b)
-
-
-*/
-fn part1(input: &str) -> Result<usize> {
-    parse(input)
-}
-
-fn part2(_input: &str) -> Result<usize> {
-    Ok(0)
+    let repeated_re = (1..10)
+        .map(|n| {
+            Regex::new(&format!("^({})+({}){{{}}}({}){{{}}}$", p42, p42, n, p31, n))
+                .expect("invalid regex")
+        })
+        .collect::<Vec<_>>();
+    Ok(messages
+        .iter()
+        .filter(|m| repeated_re.iter().any(|re| re.is_match(m)))
+        .count())
 }
 
 #[cfg(test)]
@@ -173,6 +168,63 @@ aaaabbb"#;
     #[test]
     fn test_part1() -> Result<()> {
         assert_eq!(part1(INPUT)?, 2);
+        Ok(())
+    }
+
+    #[test]
+    fn test_part2() -> Result<()> {
+        assert_eq!(
+            part2(
+                r#"42: 9 14 | 10 1
+9: 14 27 | 1 26
+10: 23 14 | 28 1
+1: "a"
+11: 42 31
+5: 1 14 | 15 1
+19: 14 1 | 14 14
+12: 24 14 | 19 1
+16: 15 1 | 14 14
+31: 14 17 | 1 13
+6: 14 14 | 1 14
+2: 1 24 | 14 4
+0: 8 11
+13: 14 3 | 1 12
+15: 1 | 14
+17: 14 2 | 1 7
+23: 25 1 | 22 14
+28: 16 1
+4: 1 1
+20: 14 14 | 1 15
+3: 5 14 | 16 1
+27: 1 6 | 14 18
+14: "b"
+21: 14 1 | 1 14
+25: 1 1 | 1 14
+22: 14 14
+8: 42
+26: 14 22 | 1 20
+18: 15 15
+7: 14 5 | 1 21
+24: 14 1
+
+abbbbbabbbaaaababbaabbbbabababbbabbbbbbabaaaa
+bbabbbbaabaabba
+babbbbaabbbbbabbbbbbaabaaabaaa
+aaabbbbbbaaaabaababaabababbabaaabbababababaaa
+bbbbbbbaaaabbbbaaabbabaaa
+bbbababbbbaaaaaaaabbababaaababaabab
+ababaaaaaabaaab
+ababaaaaabbbaba
+baabbaaaabbaaaababbaababb
+abbbbabbbbaaaababbbbbbaaaababb
+aaaaabbaabaaaaababaa
+aaaabbaaaabbaaa
+aaaabbaabbaaaaaaabbbabbbaaabbaabaaa
+babaaabbbaaabaababbaabababaaab
+aabbbbbaabbbaaaaaabbbbbababaaaaabbaaabba"#
+            )?,
+            12
+        );
         Ok(())
     }
 
