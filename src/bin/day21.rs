@@ -93,15 +93,14 @@ fn part1(input: &str) -> Result<usize> {
         .sum())
 }
 
-fn part2(input: &str) -> Result<usize> {
+fn part2(input: &str) -> Result<String> {
     let allergen_map = get_allergen_map(input)?;
     // dbg!(&allergen_map);
     let mut items = allergen_map.iter().collect::<Vec<_>>();
     items.sort_by_key(|t| t.1);
     let ingredients = items.iter().map(|t| t.0.clone()).collect::<Vec<_>>();
     let res = ingredients.join(",");
-    dbg!(res);
-    Ok(0)
+    Ok(res.into())
 }
 
 #[cfg(test)]
@@ -121,7 +120,7 @@ sqjhc mxmxvkd sbzzf (contains fish)";
 
     #[test]
     fn test_part2() -> Result<()> {
-        assert_eq!(part2(INPUT)?, 1);
+        assert_eq!(part2(INPUT)?, "mxmxvkd,sqjhc,fvjkl".to_string());
         Ok(())
     }
 }
