@@ -168,24 +168,6 @@ impl Tile {
         }
     }
 
-    // fn edge_numbers(&self) -> Vec<usize> {
-    //     let mut res = vec![];
-    //     res.push(edge_to_num(self.data[0].iter()));
-    //     res.push(edge_to_num(self.data[0].iter().rev()));
-
-    //     res.push(edge_to_num(self.data[self.size - 1].iter()));
-    //     res.push(edge_to_num(self.data[self.size - 1].iter().rev()));
-
-    //     res.push(edge_to_num(self.data.iter().map(|r| &r[0])));
-    //     res.push(edge_to_num(self.data.iter().rev().map(|r| &r[0])));
-
-    //     res.push(edge_to_num(self.data.iter().map(|r| &r[self.size - 1])));
-    //     res.push(edge_to_num(
-    //         self.data.iter().rev().map(|r| &r[self.size - 1]),
-    //     ));
-    //     res
-    // }
-
     fn as_base_edge(&self, orientation: Orientation, edge: Edge) -> DirectedEdge {
         let mut base = if !orientation.mirrored {
             /*
@@ -261,7 +243,6 @@ fn find_grid(input: &str) -> Result<Vec<(Tile, Orientation)>> {
     let size = (tiles.len() as f32).sqrt() as usize;
     let map = Map { size };
     let mut queue = VecDeque::new();
-    // let mut seen = HashSet::new();
     for tile_idx in 0..tiles.len() {
         for &mirrored in &[false, true] {
             for &top in &[Edge::Up, Edge::Right, Edge::Down, Edge::Left] {
@@ -270,36 +251,12 @@ fn find_grid(input: &str) -> Result<Vec<(Tile, Orientation)>> {
         }
     }
 
-    let mut _count = 0;
-    // let mut max_len = 0;
     while let Some(grid) = queue.pop_front() {
-        _count += 1;
-        // if grid.len() > max_len {
-        // max_len = dbg!(grid.len());
-        // }
-        // let grid_debug = grid
-        // .iter()
-        // .map(|idx| tiles[idx.0].number)
-        // .collect::<Vec<_>>();
-
-        // if grid_debug == vec![1951, 2311, 3079, 2729, 1427]
-        //, 2473]
-        // {
-        // dbg!("ok");
-        // }
-        // if _count > 1 {
-        // break;
-        // }
         if grid.len() == tiles.len() && grid[0].1.mirrored {
-            // dbg!(&grid_debug);
-            // dbg!(&[0, size - 1, grid.len() - size, grid.len() - 1]);
             return Ok(grid
                 .iter()
                 .map(|(tile_idx, orientation)| (tiles[*tile_idx].clone(), *orientation))
                 .collect::<Vec<_>>());
-            // println!(
-            // "{}",
-            // continue;
         }
         let used = grid.iter().map(|t| t.0).collect::<HashSet<_>>();
         for next_tile_idx in 0..tiles.len() {
@@ -310,30 +267,8 @@ fn find_grid(input: &str) -> Result<Vec<(Tile, Orientation)>> {
             for &mirrored in &[false, true] {
                 for &top in &[Edge::Up, Edge::Right, Edge::Down, Edge::Left] {
                     let debug = false;
-                    // let debug = grid.len() == 5
-                    // && tiles[grid[0].0].number == 1951
-                    // && grid[0].1.mirrored
-                    // && grid[0].1.top == Edge::Down
-                    // && tiles[grid[1].0].number == 2311
-                    // && grid[1].1.mirrored
-                    // && grid[1].1.top == Edge::Down
-                    // && tiles[grid[2].0].number == 3079
-                    // && !grid[2].1.mirrored
-                    // && grid[2].1.top == Edge::Up
-                    // && tiles[grid[3].0].number == 2729
-                    // && grid[3].1.mirrored
-                    // && grid[3].1.top == Edge::Down
-                    // && tiles[grid[4].0].number == 1427
-                    // && grid[4].1.mirrored
-                    // && grid[4].1.top == Edge::Down
-                    // && next_tile.number == 2473
-                    // && mirrored && (top == Edge::Right || top == Edge::Left);
                     let next_orientation = Orientation { top, mirrored };
                     let mut all_neighbours_ok = true;
-                    if debug {
-                        dbg!(next_tile_idx);
-                        // dbg!(map.neighbours(grid.len(), debug));
-                    }
                     for (grid_neighbour_idx, neighbour_edge) in map.neighbours(grid.len(), false) {
                         if let Some((tiles_neighbour_idx, neighbour_orientation)) =
                             grid.get(grid_neighbour_idx)
@@ -347,7 +282,6 @@ fn find_grid(input: &str) -> Result<Vec<(Tile, Orientation)>> {
                                     neighbour_orientation,
                                     neighbour_edge
                                 );
-                                // neighbour.print();
                             }
                             let neighbour_edge_hash =
                                 neighbour.edge_hash(*neighbour_orientation, neighbour_edge, debug);
@@ -364,8 +298,6 @@ fn find_grid(input: &str) -> Result<Vec<(Tile, Orientation)>> {
                             if neighbour_edge_hash != next_edge_hash {
                                 all_neighbours_ok = false;
                             }
-                        } else {
-                            // dbg!("no neighbour", neighbour_idx);
                         }
                     }
                     if debug {
@@ -375,13 +307,8 @@ fn find_grid(input: &str) -> Result<Vec<(Tile, Orientation)>> {
                         continue;
                     }
 
-                    // dbg!("match");
                     let mut next_grid = grid.clone();
                     next_grid.push((next_tile_idx, next_orientation));
-                    // if seen.contains(&next_grid) {
-                    // continue;
-                    // }
-                    // seen.insert(next_grid.clone());
                     queue.push_back(next_grid)
                 }
             }
@@ -443,20 +370,6 @@ fn part2(input: &str) -> Result<usize> {
             image.push(row);
         }
     }
-    dbg!(image.len());
-    for row in &image {
-        println!("{}", row.iter().map(as_char).collect::<String>());
-    }
-
-    /*
-
-
-                      #
-    #    ##    ##    ###
-     #  #  #  #  #  #   "
-
-    */
-    
     let monster = [
         "                  # ",
         "#    ##    ##    ###",
@@ -476,8 +389,6 @@ fn part2(input: &str) -> Result<usize> {
     })
     .collect::<Result<Vec<_>>>()?;
 
-    // let mut monsters = 0;
-    let monsters = 0;
     for &do_flip in &[false, true] {
         for rotations in 0..4 {
             let mut sea = image.iter().map(|r| r.clone()).collect::<Vec<_>>();
@@ -490,49 +401,23 @@ fn part2(input: &str) -> Result<usize> {
                 rotated_monster = rotate(rotated_monster);
             }
 
-            dbg!(rotated_monster.len(), rotated_monster[0].len());
-            for row in &rotated_monster {
-                println!("{}", row.iter().map(|c| as_char(&c)).collect::<String>());
-            }
-
-            for _mr in rotated_monster
-                .iter()
-                .map(|l| l.iter().map(|c| as_char(&c)).collect::<String>())
-            {
-                // println!("{}", mr);
-            }
-
             for start_row in 0..(&image.len() - rotated_monster.len()) {
                 for start_col in 0..(image[0].len() - rotated_monster[0].len()) {
-                    let mut ok = true;
+                    let mut found_monster = true;
                     for (row_offset, monster_row) in rotated_monster.iter().enumerate() {
-                        for (col_offset, monster_val) in monster_row.iter().enumerate() {
-                            // let coor = Coor::new(start_col, col_offset, start_row+row_offset);
-                            // let image_idx = map.to_index(coor);
+                        for (col_offset, &monster_val) in monster_row.iter().enumerate() {
                             let image_row = &image[start_row + row_offset];
-                            if *monster_val && !*image_row[start_col + col_offset] {
-                                if !do_flip && rotations == 0 && start_row == 3 && start_col == 2 {
-                                    // dbg!(
-                                    //     row_offset,
-                                    //     col_offset,
-                                    //     monster_val,
-                                    //     image_row[start_col + col_offset]
-                                    // );
-                                }
-                                // break 'monster_pos;
-                                ok = false;
+                            if monster_val && !*image_row[start_col + col_offset] {
+                                if !do_flip && rotations == 0 && start_row == 3 && start_col == 2 {}
+                                found_monster = false;
                             }
                         }
                     }
-                    if ok {
-                        // dbg!(do_flip, rotations, start_row, start_col);
+                    if found_monster {
                         rotation_monsters += 1;
-                        // dbg!("foo");
                         for (row_offset, monster_row) in rotated_monster.iter().enumerate() {
                             for (col_offset, monster_val) in monster_row.iter().enumerate() {
-                                // dbg!(monster_val);
                                 if *monster_val {
-                                    assert!(sea[start_row + row_offset][start_col + col_offset]);
                                     sea[start_row + row_offset][start_col + col_offset] = &false;
                                 }
                             }
@@ -540,43 +425,16 @@ fn part2(input: &str) -> Result<usize> {
                     }
                 }
             }
-            if rotation_monsters > monsters {
-                // monsters = rotation_monsters;
+            if rotation_monsters > 0 {
                 return Ok(sea
                     .iter()
                     .map(|r| r.iter().filter(|b| ***b).count())
                     .sum::<usize>());
             }
-            dbg!(do_flip, rotations, rotation_monsters);
-            println!(
-                "{}",
-                sea.iter()
-                    .map(|r| r.iter().filter(|b| ***b).count())
-                    .sum::<usize>()
-            );
         }
     }
 
-    // dbg!(monster);
-    // dbg!(rotate(monster)
-    // .iter()
-    // .map(|l| l.iter().map(|c| as_char(&c)).collect::<String>())
-    // .collect::<Vec<_>>());
-    // for (grid_index, (tile, orientation)) in grid[..4].iter().cloned().enumerate() {
-    //     let edge = tile.as_base_edge(orientation, Edge::Up);
-    //     let row = tile.image_row(edge, 1);
-    //     // dbg!(orientation);
-    //     // tile._print();
-    //     // println!("{}", tile.number);
-    //     println!(
-    //         "{}",
-    //         row[1..row.len() - 1]
-    //             .iter()
-    //             .map(as_char)
-    //             .collect::<String>()
-    //     );
-    // }
-    Ok(monsters)
+    bail!("didn't find any sea monsters");
 }
 
 #[cfg(test)]
@@ -587,7 +445,6 @@ mod tests {
     fn test_parse() -> Result<()> {
         let input = include_str!("day20.sample");
         let tiles = parse(input)?;
-        dbg!(&tiles[0]);
         Ok(())
     }
 
@@ -616,11 +473,7 @@ mod tests {
             top: Edge::Left,
             mirrored: false,
         };
-        // tile.edge_hash(orientation, Edge::Up, true);
-        // tile.edge_hash(orientation, Edge::Right, true);
-        // tile.edge_hash(orientation, Edge::Down, true);
         tile.edge_hash(orientation, Edge::Up, true);
-        // assert!(false);
         Ok(())
     }
 
