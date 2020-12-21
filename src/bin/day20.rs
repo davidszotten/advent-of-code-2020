@@ -91,21 +91,20 @@ struct Tile {
     data: Vec<Vec<bool>>,
 }
 
+fn as_char(el: &&bool) -> char {
+    match **el {
+        false => '.',
+        true => '#',
+    }
+}
+
 fn edge_to_num<'a, I>(edge: I, debug: bool) -> usize
 where
     I: Iterator<Item = &'a bool>,
 {
     let foo: Vec<_> = edge.collect();
     if debug {
-        println!(
-            "edge: {}",
-            foo.iter()
-                .map(|e| match e {
-                    false => '.',
-                    true => '#',
-                })
-                .collect::<String>()
-        );
+        println!("edge: {}", foo.iter().map(as_char).collect::<String>());
     }
     let edge = foo.iter();
     edge.fold(0, |acc, &el| (acc << 1) + *el as usize)
@@ -150,6 +149,25 @@ impl Tile {
         }
     }
 
+    fn image_row(&self, edge: DirectedEdge, row: usize) -> Vec<&bool> {
+        match (edge.edge, edge.reversed) {
+            (Edge::Up, false) => self.data[row].iter().collect(),
+            (Edge::Down, false) => self.data[self.size - 1 - row].iter().collect(),
+            (Edge::Left, false) => self.data.iter().map(|r| &r[row]).collect(),
+            (Edge::Right, false) => self.data.iter().map(|r| &r[self.size - 1 - row]).collect(),
+
+            (Edge::Up, true) => self.data[row].iter().rev().collect(),
+            (Edge::Down, true) => self.data[self.size - 1 - row].iter().rev().collect(),
+            (Edge::Left, true) => self.data.iter().rev().map(|r| &r[row]).collect(),
+            (Edge::Right, true) => self
+                .data
+                .iter()
+                .rev()
+                .map(|r| &r[self.size - 1 - row])
+                .collect(),
+        }
+    }
+
     // fn edge_numbers(&self) -> Vec<usize> {
     //     let mut res = vec![];
     //     res.push(edge_to_num(self.data[0].iter()));
@@ -168,7 +186,7 @@ impl Tile {
     //     res
     // }
 
-    fn edge_hash(&self, orientation: Orientation, edge: Edge, debug: bool) -> usize {
+    fn as_base_edge(&self, orientation: Orientation, edge: Edge) -> DirectedEdge {
         let mut base = if !orientation.mirrored {
             /*
               U1 U2
@@ -197,9 +215,6 @@ impl Tile {
             ]
         };
         while base[0].edge != orientation.top {
-            if debug {
-                println!("rotate");
-            }
             base.rotate_right(1);
             base[0].reversed = !base[0].reversed;
             base[2].reversed = !base[2].reversed;
@@ -210,13 +225,15 @@ impl Tile {
             Edge::Down => 2,
             Edge::Left => 3,
         };
-        if debug {
-            dbg!(base, index);
-        }
-        self.base_edge_hash(base[index], debug)
+        base[index]
     }
 
-    fn print(&self) {
+    fn edge_hash(&self, orientation: Orientation, edge: Edge, debug: bool) -> usize {
+        let base = self.as_base_edge(orientation, edge);
+        self.base_edge_hash(base, debug)
+    }
+
+    fn _print(&self) {
         for row in &self.data {
             for c in row {
                 print!(
@@ -239,7 +256,7 @@ fn parse(input: &str) -> Result<Vec<Tile>> {
         .collect::<Result<Vec<_>>>()
 }
 
-fn part1(input: &str) -> Result<usize> {
+fn find_grid(input: &str) -> Result<Vec<(Tile, Orientation)>> {
     let tiles = parse(input)?;
     let size = (tiles.len() as f32).sqrt() as usize;
     let map = Map { size };
@@ -254,12 +271,12 @@ fn part1(input: &str) -> Result<usize> {
     }
 
     let mut _count = 0;
-    let mut max_len = 0;
+    // let mut max_len = 0;
     while let Some(grid) = queue.pop_front() {
         _count += 1;
-        if grid.len() > max_len {
-            max_len = dbg!(grid.len());
-        }
+        // if grid.len() > max_len {
+        // max_len = dbg!(grid.len());
+        // }
         // let grid_debug = grid
         // .iter()
         // .map(|idx| tiles[idx.0].number)
@@ -273,18 +290,15 @@ fn part1(input: &str) -> Result<usize> {
         // if _count > 1 {
         // break;
         // }
-        if grid.len() == tiles.len() {
+        if grid.len() == tiles.len() && grid[0].1.mirrored {
             // dbg!(&grid_debug);
             // dbg!(&[0, size - 1, grid.len() - size, grid.len() - 1]);
-            return Ok(
-                // println!(
-                // "{}",
-                [0, size - 1, grid.len() - size, grid.len() - 1]
-                    .iter()
-                    .map(|&idx| grid[idx].0)
-                    .map(|tile_idx| tiles[tile_idx].number)
-                    .product::<usize>(),
-            );
+            return Ok(grid
+                .iter()
+                .map(|(tile_idx, orientation)| (tiles[*tile_idx].clone(), *orientation))
+                .collect::<Vec<_>>());
+            // println!(
+            // "{}",
             // continue;
         }
         let used = grid.iter().map(|t| t.0).collect::<HashSet<_>>();
@@ -373,11 +387,196 @@ fn part1(input: &str) -> Result<usize> {
             }
         }
     }
-    Ok(0)
+    bail!("failed to assemble grid");
 }
 
-fn part2(_input: &str) -> Result<usize> {
-    Ok(0)
+fn part1(input: &str) -> Result<usize> {
+    let grid = find_grid(input)?;
+    let size = (grid.len() as f32).sqrt() as usize;
+
+    Ok([0, size - 1, grid.len() - size, grid.len() - 1]
+        .iter()
+        .map(|&idx| grid[idx].0.number)
+        .product::<usize>())
+}
+
+fn rotate(im: Vec<Vec<bool>>) -> Vec<Vec<bool>> {
+    let rows = im.len();
+    let cols = im[0].len();
+
+    let mut new = vec![];
+    for col in 0..cols {
+        let mut new_row = vec![];
+        for row in 0..rows {
+            new_row.push(im[row][col]);
+        }
+        new.push(new_row);
+    }
+    new
+}
+
+fn flip(im: Vec<Vec<bool>>) -> Vec<Vec<bool>> {
+    im.into_iter()
+        .map(|row| row.into_iter().rev().collect())
+        .collect()
+}
+
+fn part2(input: &str) -> Result<usize> {
+    let grid = find_grid(input)?;
+    let size = (grid.len() as f32).sqrt() as usize;
+    let tile_size = grid[0].0.size;
+    let map = Map { size };
+
+    let mut image: Vec<Vec<&bool>> = vec![];
+    for large_row in 0..size {
+        for tile_row in 1..(tile_size - 1) {
+            let mut row = vec![];
+            for large_column in 0..size {
+                let grid_index = map
+                    .to_index(Coor::new(large_column as _, large_row as _))
+                    .expect("should be in range");
+                let (tile, orientation) = &grid[grid_index];
+                let edge = tile.as_base_edge(*orientation, Edge::Up);
+                let image_row = tile.image_row(edge, tile_row);
+                row.extend_from_slice(&image_row[1..image_row.len() - 1]);
+            }
+            image.push(row);
+        }
+    }
+    dbg!(image.len());
+    for row in &image {
+        println!("{}", row.iter().map(as_char).collect::<String>());
+    }
+
+    /*
+
+
+                      #
+    #    ##    ##    ###
+     #  #  #  #  #  #   "
+
+    */
+    
+    let monster = [
+        "                  # ",
+        "#    ##    ##    ###",
+        " #  #  #  #  #  #   ",
+    ]
+    .iter()
+    .map(|l| {
+        l.chars()
+            .map(|c| {
+                Ok(match c {
+                    ' ' => false,
+                    '#' => true,
+                    _ => bail!("invalid tile `{}`", c),
+                })
+            })
+            .collect::<Result<Vec<_>>>()
+    })
+    .collect::<Result<Vec<_>>>()?;
+
+    // let mut monsters = 0;
+    let monsters = 0;
+    for &do_flip in &[false, true] {
+        for rotations in 0..4 {
+            let mut sea = image.iter().map(|r| r.clone()).collect::<Vec<_>>();
+            let mut rotation_monsters = 0;
+            let mut rotated_monster = monster.clone();
+            if do_flip {
+                rotated_monster = flip(rotated_monster);
+            }
+            for _ in 0..rotations {
+                rotated_monster = rotate(rotated_monster);
+            }
+
+            dbg!(rotated_monster.len(), rotated_monster[0].len());
+            for row in &rotated_monster {
+                println!("{}", row.iter().map(|c| as_char(&c)).collect::<String>());
+            }
+
+            for _mr in rotated_monster
+                .iter()
+                .map(|l| l.iter().map(|c| as_char(&c)).collect::<String>())
+            {
+                // println!("{}", mr);
+            }
+
+            for start_row in 0..(&image.len() - rotated_monster.len()) {
+                for start_col in 0..(image[0].len() - rotated_monster[0].len()) {
+                    let mut ok = true;
+                    for (row_offset, monster_row) in rotated_monster.iter().enumerate() {
+                        for (col_offset, monster_val) in monster_row.iter().enumerate() {
+                            // let coor = Coor::new(start_col, col_offset, start_row+row_offset);
+                            // let image_idx = map.to_index(coor);
+                            let image_row = &image[start_row + row_offset];
+                            if *monster_val && !*image_row[start_col + col_offset] {
+                                if !do_flip && rotations == 0 && start_row == 3 && start_col == 2 {
+                                    // dbg!(
+                                    //     row_offset,
+                                    //     col_offset,
+                                    //     monster_val,
+                                    //     image_row[start_col + col_offset]
+                                    // );
+                                }
+                                // break 'monster_pos;
+                                ok = false;
+                            }
+                        }
+                    }
+                    if ok {
+                        // dbg!(do_flip, rotations, start_row, start_col);
+                        rotation_monsters += 1;
+                        // dbg!("foo");
+                        for (row_offset, monster_row) in rotated_monster.iter().enumerate() {
+                            for (col_offset, monster_val) in monster_row.iter().enumerate() {
+                                // dbg!(monster_val);
+                                if *monster_val {
+                                    assert!(sea[start_row + row_offset][start_col + col_offset]);
+                                    sea[start_row + row_offset][start_col + col_offset] = &false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if rotation_monsters > monsters {
+                // monsters = rotation_monsters;
+                return Ok(sea
+                    .iter()
+                    .map(|r| r.iter().filter(|b| ***b).count())
+                    .sum::<usize>());
+            }
+            dbg!(do_flip, rotations, rotation_monsters);
+            println!(
+                "{}",
+                sea.iter()
+                    .map(|r| r.iter().filter(|b| ***b).count())
+                    .sum::<usize>()
+            );
+        }
+    }
+
+    // dbg!(monster);
+    // dbg!(rotate(monster)
+    // .iter()
+    // .map(|l| l.iter().map(|c| as_char(&c)).collect::<String>())
+    // .collect::<Vec<_>>());
+    // for (grid_index, (tile, orientation)) in grid[..4].iter().cloned().enumerate() {
+    //     let edge = tile.as_base_edge(orientation, Edge::Up);
+    //     let row = tile.image_row(edge, 1);
+    //     // dbg!(orientation);
+    //     // tile._print();
+    //     // println!("{}", tile.number);
+    //     println!(
+    //         "{}",
+    //         row[1..row.len() - 1]
+    //             .iter()
+    //             .map(as_char)
+    //             .collect::<String>()
+    //     );
+    // }
+    Ok(monsters)
 }
 
 #[cfg(test)]
@@ -398,13 +597,6 @@ mod tests {
     }
 
     #[test]
-    fn test_part1() -> Result<()> {
-        let input = include_str!("day20.sample");
-        assert_eq!(part1(input)?, 20899048083289);
-        Ok(())
-    }
-
-    // #[test]
     fn test_edge_hash() -> Result<()> {
         let tile = Tile::from_str(
             "Tile 2473:
@@ -419,7 +611,7 @@ mod tests {
 ##...##.#.
 ..###.#.#.",
         )?;
-        tile.print();
+        tile._print();
         let orientation = Orientation {
             top: Edge::Left,
             mirrored: false,
@@ -428,7 +620,21 @@ mod tests {
         // tile.edge_hash(orientation, Edge::Right, true);
         // tile.edge_hash(orientation, Edge::Down, true);
         tile.edge_hash(orientation, Edge::Up, true);
-        assert!(false);
+        // assert!(false);
+        Ok(())
+    }
+
+    #[test]
+    fn test_part1() -> Result<()> {
+        let input = include_str!("day20.sample");
+        assert_eq!(part1(input)?, 20899048083289);
+        Ok(())
+    }
+
+    #[test]
+    fn test_part2() -> Result<()> {
+        let input = include_str!("day20.sample");
+        assert_eq!(part2(input)?, 273);
         Ok(())
     }
 }
