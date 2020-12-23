@@ -6,14 +6,9 @@ fn main() -> Result<()> {
     dispatch(part1, part2)
 }
 
-#[derive(Debug)]
-struct Game {
-    cups: VecDeque<usize>,
-    // _current_index: usize,
-}
+type Cups = VecDeque<usize>;
 
-fn round(game: Game) -> Game {
-    let mut cups = game.cups;
+fn round(mut cups: Cups) -> Cups {
     let len = cups.len();
     // current: cups[0]
     let current = cups.pop_front().expect("always have cups");
@@ -58,33 +53,32 @@ fn round(game: Game) -> Game {
         .expect("should find destination");
     // dbg!(current_index, &cups);
     cups.rotate_left(current_index + 1);
-    Game { cups }
+    cups
 }
 
-fn run(mut game: Game, moves: usize) -> String {
+fn run(mut cups: Cups, moves: usize) -> String {
     for _mv in 0..moves {
         // println!("Move {}\n{:?}\n", mv + 1, &game.cups);
-        game = round(game);
+        cups = round(cups);
     }
 
-    let one_index = game
-        .cups
+    let one_index = cups
         .iter()
         .enumerate()
         .filter(|(_, &val)| val == 1)
         .map(|(idx, _)| idx)
         .next()
         .expect("should find destination");
-    game.cups.rotate_left(one_index);
+    cups.rotate_left(one_index);
 
     let mut res = "".to_string();
-    for cup in game.cups.iter().skip(1) {
+    for cup in cups.iter().skip(1) {
         res = format!("{}{}", res, cup);
     }
     res
 }
 
-fn parse(input: &str) -> Result<Game> {
+fn parse(input: &str) -> Result<Cups> {
     let cups = input
         .chars()
         .map(|c| {
@@ -93,21 +87,21 @@ fn parse(input: &str) -> Result<Game> {
                 .map_err(|e| anyhow!("parse failure: {}", e))
         })
         .collect::<Result<VecDeque<usize>>>()?;
-    Ok(Game { cups })
+    Ok(cups)
 }
 
 fn part1(input: &str) -> Result<String> {
-    let game = parse(input)?;
-    // println!("Move {}\n{:?}\n", 0 + 1, &game.cups);
-    let res = run(game, 100);
-    // println!("Move {}\n{:?}\n", "end", &game.cups);
+    let cups = parse(input)?;
+    // println!("Move {}\n{:?}\n", 0 + 1, &cups);
+    let res = run(cups, 100);
+    // println!("Move {}\n{:?}\n", "end", &cups);
     Ok(res)
 
     // 52863971 too high
 }
 
 fn part2(input: &str) -> Result<i32> {
-    let game = parse(input)?;
+    let cups = parse(input)?;
     Ok(0)
 }
 
@@ -123,8 +117,8 @@ mod tests {
 
     #[test]
     fn test_run() -> Result<()> {
-        let game = parse("389125467")?;
-        let res = run(game, 10);
+        let cups = parse("389125467")?;
+        let res = run(cups, 10);
         assert_eq!(res, "92658374");
         Ok(())
     }
