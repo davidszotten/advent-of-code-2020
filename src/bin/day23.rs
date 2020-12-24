@@ -237,14 +237,14 @@ fn _part2a(input: &str) -> Result<usize> {
 
 fn part2(input: &str) -> Result<usize> {
     let (mut cur, mut last, mut cups) = parse_h(input)?;
-    // for n in cups.len()..=1_000_000 {
-    for n in (cups.len() + 1)..=20 {
+    for n in (cups.len() + 1)..=1_000_000 {
+        // for n in (cups.len() + 1)..=20 {
         cups.insert(last, n);
         last = n;
     }
     cups.insert(last, cur);
 
-    dbg!(&cups);
+    // dbg!(&cups);
     for _mv in 0..10_000_000 {
         let next = round_h(cur, cups);
         cur = next.0;
