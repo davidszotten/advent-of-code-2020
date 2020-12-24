@@ -77,25 +77,43 @@ struct Coor {
     z: i64,
 }
 
-impl Coor {
-    fn neighbours(&self) -> Vec<Coor> {
-        [
+struct NeighbourIterator<'a> {
+    coor: &'a Coor,
+    pos: usize,
+}
+
+impl<'a> NeighbourIterator<'a> {
+    fn new(coor: &'a Coor) -> Self {
+        Self { coor, pos: 0 }
+    }
+}
+
+impl<'a> Iterator for NeighbourIterator<'a> {
+    type Item = Coor;
+    fn next(&mut self) -> Option<Self::Item> {
+        let positions = [
             (1, -1, 0),
             (-1, 1, 0),
             (1, 0, -1),
             (-1, 0, 1),
             (0, 1, -1),
             (0, -1, 1),
-        ]
-        .iter()
-        .map(|(x, y, z)| {
+        ];
+        let pos = self.pos;
+        self.pos += 1;
+        positions.get(pos).map(|(x, y, z)| {
             Coor {
                 x: *x,
                 y: *y,
                 z: *z,
-            } + *self
+            } + *self.coor
         })
-        .collect::<Vec<_>>()
+    }
+}
+
+impl Coor {
+    fn neighbours(&self) -> NeighbourIterator {
+        NeighbourIterator::new(self)
     }
 }
 
@@ -140,36 +158,32 @@ fn part1(input: &str) -> Result<usize> {
 }
 
 fn flip(black_tiles: HashSet<Coor>) -> HashSet<Coor> {
-    let mut whites_to_consider = HashSet::new();
-    for tile in &black_tiles {
-        for neighbour in tile.neighbours() {
-            if black_tiles.contains(&neighbour) {
-                continue;
-            }
-            whites_to_consider.insert(neighbour);
-        }
-    }
     let mut next = HashSet::new();
 
     let black_neighbours = |tile: &Coor| {
         tile.neighbours()
-            .iter()
             .map(|n| black_tiles.contains(&n))
             .filter(|t| *t)
             .count()
     };
 
     for tile in &black_tiles {
-        let bc = black_neighbours(tile);
-        if bc == 0 || bc > 2 {
-        } else {
-            next.insert(tile.clone());
+        for neighbour in tile.neighbours() {
+            if black_tiles.contains(&neighbour) {
+                continue;
+            }
+
+            let bc = black_neighbours(&neighbour);
+            if bc == 2 {
+                next.insert(neighbour.clone());
+            }
         }
     }
 
-    for tile in &whites_to_consider {
+    for tile in &black_tiles {
         let bc = black_neighbours(tile);
-        if bc == 2 {
+        if bc == 0 || bc > 2 {
+        } else {
             next.insert(tile.clone());
         }
     }
